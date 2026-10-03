@@ -44,7 +44,7 @@ export default function CartPage() {
     deliveryOption: "STANDARD" as "STANDARD" | "EXPRESS" | "SCHEDULED",
     deliveryDate: "",
     deliverySlot: "",
-    paymentMethod: "COD" as "COD" | "UPI" | "CARD",
+    paymentMethod: "COD" as "COD" | "UPI_MOCK",
   });
 
   function loadCart() {
@@ -96,12 +96,18 @@ export default function CartPage() {
       const res = await fetch("/api/cart/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, cityId, idempotencyKey }),
+        body: JSON.stringify({
+          ...form,
+          deliveryDate: form.deliveryOption === "SCHEDULED" ? form.deliveryDate || undefined : undefined,
+          deliverySlot: form.deliveryOption === "SCHEDULED" ? form.deliverySlot || undefined : undefined,
+          cityId,
+          idempotencyKey,
+        }),
       });
       const result = await res.json();
       if (!res.ok) {
         setSubmitError(result.message ?? "Could not place your order. Please review and try again.");
-        if (result.fieldErrors) setFieldErrors(result.fieldErrors);
+        if (result.details) setFieldErrors(result.details);
         return;
       }
       router.push(`/orders/${result.order.id}/confirmed`);
@@ -226,6 +232,15 @@ export default function CartPage() {
             <Label>Landmark (optional)</Label>
             <Input value={form.landmark} onChange={(e) => setForm((f) => ({ ...f, landmark: e.target.value }))} />
 
+            <Label>Pincode (optional)</Label>
+            <Input
+              inputMode="numeric"
+              maxLength={6}
+              value={form.pincode}
+              onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))}
+            />
+            {fieldErrors.pincode && <p className="text-xs text-red-600">{fieldErrors.pincode[0]}</p>}
+
             <Label>Your name (sender)</Label>
             <Input value={form.senderName} onChange={(e) => setForm((f) => ({ ...f, senderName: e.target.value }))} />
             {fieldErrors.senderName && <p className="text-xs text-red-600">{fieldErrors.senderName[0]}</p>}
@@ -240,7 +255,12 @@ export default function CartPage() {
             </Select>
 
             <Label>Gift message (optional)</Label>
-            <Textarea value={form.giftMessage} onChange={(e) => setForm((f) => ({ ...f, giftMessage: e.target.value }))} />
+            <Textarea
+              maxLength={250}
+              value={form.giftMessage}
+              onChange={(e) => setForm((f) => ({ ...f, giftMessage: e.target.value }))}
+            />
+            {fieldErrors.giftMessage && <p className="text-xs text-red-600">{fieldErrors.giftMessage[0]}</p>}
 
             <Label>Delivery option</Label>
             <Select
@@ -278,8 +298,7 @@ export default function CartPage() {
               onChange={(e) => setForm((f) => ({ ...f, paymentMethod: e.target.value as typeof f.paymentMethod }))}
             >
               <option value="COD">Cash on Delivery</option>
-              <option value="UPI">UPI</option>
-              <option value="CARD">Card</option>
+              <option value="UPI_MOCK">UPI (mock)</option>
             </Select>
 
             {submitError && <p className="text-sm text-red-600">{submitError}</p>}

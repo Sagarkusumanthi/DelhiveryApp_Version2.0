@@ -1,6 +1,12 @@
 import { PrismaClient, Role, DeliveryOption, PaymentMethod } from "@prisma/client";
 import { randomBytes, scrypt as scryptCb } from "crypto";
 import { promisify } from "util";
+import { existsSync } from "fs";
+
+// Load .env for local CLI runs (Next.js does this for the app, but tsx does not).
+if (!process.env.DATABASE_URL && existsSync(".env") && typeof process.loadEnvFile === "function") {
+  process.loadEnvFile(".env");
+}
 
 const scrypt = promisify(scryptCb);
 

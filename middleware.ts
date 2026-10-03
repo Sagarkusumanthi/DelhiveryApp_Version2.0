@@ -41,7 +41,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/login?session_expired=1", req.url));
     }
   }
-  if (pathname.startsWith("/orders") || pathname.startsWith("/checkout")) {
+  if (pathname.startsWith("/orders") || pathname.startsWith("/checkout") || pathname.startsWith("/cart")) {
     if (session.role !== "CUSTOMER") {
       if (isApi) return NextResponse.json({ error: "forbidden", message: "Customer access required." }, { status: 403 });
       return NextResponse.redirect(new URL("/login?session_expired=1", req.url));

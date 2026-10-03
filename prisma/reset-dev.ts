@@ -4,6 +4,12 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { existsSync } from "fs";
+
+// Load .env for local CLI runs (Next.js does this for the app, but tsx does not).
+if (!process.env.DATABASE_URL && existsSync(".env") && typeof process.loadEnvFile === "function") {
+  process.loadEnvFile(".env");
+}
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {

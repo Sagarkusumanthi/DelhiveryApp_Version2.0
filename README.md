@@ -13,11 +13,9 @@ Built with Next.js 14 (App Router) + TypeScript, Tailwind CSS, Prisma ORM, and P
 - **Next.js 14** (App Router, TypeScript) on Vercel
 - **PostgreSQL** (Neon via Vercel Marketplace, or any Postgres instance)
 - **Prisma ORM** — schema + committed migrations in `prisma/`
-- **Prisma Client runs in "no Rust engine" mode** (`queryCompiler` + `driverAdapters` +
-  `engineType = "client"` in `prisma/schema.prisma`, with `@prisma/adapter-pg`). This is
-  Prisma's own documented architecture for serverless/edge deployments — it removes the
-  native query-engine binary entirely, which means smaller, faster Vercel builds. See
-  https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/no-rust-engine
+- **Prisma Client** (standard `prisma-client-js` generator). `prisma generate` runs on
+  every install (`postinstall`) and again in `npm run build`, so Vercel's dependency cache
+  can never serve a stale client
 - **Tailwind CSS**, **lucide-react** icons, a small set of hand-built + Radix-based UI
   primitives (no full shadcn CLI dependency, to keep the dependency tree predictable)
 - **React Hook Form + Zod** for forms and shared client/server validation
@@ -37,8 +35,8 @@ Built with Next.js 14 (App Router) + TypeScript, Tailwind CSS, Prisma ORM, and P
 npm install
 cp .env.example .env
 # edit .env: set DATABASE_URL, DIRECT_URL, and SESSION_SECRET
-npx prisma migrate deploy   # applies the committed migration in prisma/migrations/
-npm run db:seed             # seeds demo cities, stores, products, orders, and accounts
+npx prisma migrate deploy   # applies the committed migrations in prisma/migrations/
+npm run db:seed             # seeds demo cities, stores, products, orders, and accounts (reads .env)
 npm run dev                 # http://localhost:3000
 ```
 
@@ -81,7 +79,8 @@ second tab logging in as a different role will replace the first tab's session t
 
 ## 3. Database notes
 
-- Schema: `prisma/schema.prisma`. Migration: `prisma/migrations/20260101000000_init/`.
+- Schema: `prisma/schema.prisma`. Migrations: `prisma/migrations/` (init, group gifts &
+  reminders, user phone, store hours, cart).
 - All monetary values are `Decimal(10,2)`; delivery fees are fixed (₹49 standard, ₹99
   express, ₹79 scheduled) and totals are **always recalculated server-side** — the client's
   displayed total is only used to detect drift and force a re-review.
@@ -132,8 +131,8 @@ deployed app.
    integration uses different names.
 4. Add `SESSION_SECRET` as an environment variable (generate with `openssl rand -base64 32`).
    **Never** prefix it with `NEXT_PUBLIC_`.
-5. Deploy. Vercel runs `npm install` (which runs `prisma generate` via `postinstall`) and
-   `npm run build` automatically.
+5. Deploy. Vercel auto-detects Next.js, runs `npm install` and `npm run build`
+   (`prisma generate && next build`). Node 20+ is required (`engines` in `package.json`).
 6. Run the migration against your production database once, from your local machine or a
    one-off Vercel CLI command:
    ```bash
@@ -161,11 +160,10 @@ deployed app.
 
 ## 7. Known limitations / what's intentionally out of scope
 
-Per the product brief, this MVP deliberately does **not** include: a shopping cart or
-multi-store orders, real payment processing, a rider app or live delivery tracking,
+This MVP deliberately does **not** include: multi-store orders (a cart can only hold items
+from one store at a time), real payment processing, a rider app or live delivery tracking,
 registration/OTP/password-recovery flows, coupons, or a full support/ticketing platform.
-"Occasion reminders" and "Group gifting" are shown as **Coming soon** placeholders on the
-home screen, per spec.
+"AI Gift Assistant" is shown as a **Coming soon** teaser on the home screen.
 
 ## 8. What was verified before delivery
 
