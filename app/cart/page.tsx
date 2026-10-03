@@ -53,7 +53,10 @@ export default function CartPage() {
         if (!r.ok) throw new Error((await r.json()).message ?? "Could not load your cart.");
         return r.json();
       })
-      .then((d) => setItems(d.cart.items))
+      .then((d) => {
+        setItems(d.cart.items);
+        setError(null);
+      })
       .catch((e) => setError(e.message));
   }
 
