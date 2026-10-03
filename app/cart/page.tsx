@@ -102,12 +102,14 @@ export default function CartPage() {
           deliverySlot: form.deliveryOption === "SCHEDULED" ? form.deliverySlot || undefined : undefined,
           cityId,
           idempotencyKey,
+          displayedTotal: total,
         }),
       });
       const result = await res.json();
       if (!res.ok) {
         setSubmitError(result.message ?? "Could not place your order. Please review and try again.");
         if (result.details) setFieldErrors(result.details);
+        if (result.details?.total) loadCart();
         return;
       }
       router.push(`/orders/${result.order.id}/confirmed`);

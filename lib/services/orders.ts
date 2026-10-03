@@ -200,6 +200,17 @@ export async function createOrderFromCart({ customerId, input }: { customerId: s
     cartItems.map((i) => ({ unitPrice: i.product.price, quantity: i.quantity })),
     input.deliveryOption
   );
+
+  if (
+    typeof input.displayedTotal === "number" &&
+    Math.abs(input.displayedTotal - total.toNumber()) > 0.01
+  ) {
+    throw new ValidationError(
+      "The price has changed since you last viewed your cart. Please review and confirm again.",
+      { total: ["Price changed"] }
+    );
+  }
+
   const deliveryDate = input.deliveryOption === "SCHEDULED" && input.deliveryDate ? new Date(`${input.deliveryDate}T00:00:00+05:30`) : null;
 
   for (let attempt = 0; attempt < 5; attempt++) {

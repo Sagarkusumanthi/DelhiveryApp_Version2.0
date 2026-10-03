@@ -207,6 +207,7 @@ export const cartCheckoutSchema = recipientSchema
       paymentMethod: paymentMethodEnum,
       cityId: z.string().min(1),
       idempotencyKey: z.string().min(10),
+      displayedTotal: z.number().optional(), // used to detect price drift; recalculated server-side regardless
     })
   )
   .superRefine((val, ctx) => {

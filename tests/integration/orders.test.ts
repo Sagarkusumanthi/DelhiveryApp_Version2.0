@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   createOrder,
+  createOrderFromCart,
   transitionOrderAsStoreOwner,
   transitionOrderAsAdmin,
   getOrderForStore,
@@ -171,6 +172,27 @@ describe("createOrder", () => {
     await db.product.update({ where: { id: productId }, data: { isAvailable: false } });
     await expect(createOrder({ customerId, input: baseCheckoutInput() })).rejects.toBeInstanceOf(ValidationError);
     await db.product.update({ where: { id: productId }, data: { isAvailable: true } });
+  });
+});
+
+describe("createOrderFromCart", () => {
+  function cartCheckoutInput(overrides: Partial<any> = {}) {
+    const { productId: _p, quantity: _q, ...rest } = baseCheckoutInput(overrides);
+    return rest;
+  }
+
+  it("rejects when the displayed cart total has drifted, and keeps the cart", async () => {
+    await db.cartItem.create({ data: { customerId: otherCustomerId, productId, quantity: 2 } });
+    // 100 * 2 + 49 = 249, but the client last saw 199.
+    await expect(
+      createOrderFromCart({ customerId: otherCustomerId, input: cartCheckoutInput({ displayedTotal: 199 }) })
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(await db.cartItem.count({ where: { customerId: otherCustomerId } })).toBe(1);
+  });
+
+  it("places the order when the displayed cart total matches", async () => {
+    const order = await createOrderFromCart({ customerId: otherCustomerId, input: cartCheckoutInput({ displayedTotal: 249 }) });
+    expect(order.total.toNumber()).toBe(249);
   });
 });
 
