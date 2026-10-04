@@ -5,6 +5,7 @@ import { CustomerHeader } from "@/components/CustomerHeader";
 import { OrderTimeline } from "@/components/OrderTimeline";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
+import { STATUS_EXPLANATIONS } from "@/lib/demo";
 
 interface OrderItem { product: { name: string; price: number; icon: string }; qty: number }
 interface Order {
@@ -72,6 +73,7 @@ export default function OrderTrackPage() {
 
         <div className="mb-4 rounded-3xl border border-border bg-white p-4 shadow-sm">
           <OrderTimeline status={order.status} />
+          <p className="mt-1 text-xs text-muted">{STATUS_EXPLANATIONS[order.status]}</p>
           {order.status === "REJECTED" && order.rejectionReason && (
             <p className="mt-1 text-xs text-muted">Reason: {order.rejectionReason}</p>
           )}

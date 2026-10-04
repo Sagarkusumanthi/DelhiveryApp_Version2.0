@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CustomerHeader } from "@/components/CustomerHeader";
 import { ProductCard } from "@/components/ProductCard";
+import { storeHoursLabel } from "@/lib/demo";
 
 interface Store {
   id: string; name: string; category: string; icon: string; open: boolean;
@@ -41,7 +42,7 @@ export default function StoreDetailPage() {
             <p className="truncate font-serif text-lg font-semibold text-ink">{store.name}</p>
             <p className="text-xs text-muted">{store.category}</p>
             <p className="text-xs text-muted">
-              🕐 {store.openTime} – {store.closeTime} {!store.open && <span className="font-semibold text-amber-700">· Closed</span>}
+              🏪 Open {storeHoursLabel(store)} {!store.open && <span className="font-semibold text-amber-700">· Closed</span>}
             </p>
           </div>
         </div>

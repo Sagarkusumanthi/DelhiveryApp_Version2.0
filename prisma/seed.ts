@@ -3,9 +3,11 @@
 // passwords), reminders and a group gift. Run with: npm run db:seed
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../lib/password";
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
 
 const CITIES = [
   { id: "hyd", name: "Hyderabad" },
@@ -112,10 +114,13 @@ async function main() {
 
   console.log("Seeding demo users (hashed passwords)…");
   const hashedDemoPassword = await hashPassword(DEMO_PASSWORD);
+  // These exactly match the original prototype's DEMO_USERS object so the
+  // app behaves identically to the design spec for anyone trying the demo
+  // credentials shown there.
   const demoUsers = [
-    { id: "demo-customer", name: "Ananya Rao", email: "customer@giftapp.demo", phone: "9876543210", password: hashedDemoPassword, role: "CUSTOMER" as const, storeId: null as string | null },
-    { id: "demo-store-owner", name: "Priya Nair", email: "store@giftapp.demo", phone: "9123456780", password: hashedDemoPassword, role: "STORE_OWNER" as const, storeId: "petals" },
-    { id: "demo-admin", name: "Giftly Admin", email: "admin@giftapp.demo", phone: "9988776655", password: hashedDemoPassword, role: "ADMIN" as const, storeId: null },
+    { id: "demo-customer", name: "Ananya Rao", email: "ananya.rao@giftly.app", phone: "9876543210", password: hashedDemoPassword, role: "CUSTOMER" as const, storeId: null as string | null },
+    { id: "demo-store-owner", name: "Priya Nair", email: "priya.nair@giftly.app", phone: "9123456780", password: hashedDemoPassword, role: "STORE_OWNER" as const, storeId: "petals" },
+    { id: "demo-admin", name: "Giftly Admin", email: "admin@giftly.app", phone: "9988776655", password: hashedDemoPassword, role: "ADMIN" as const, storeId: null },
   ];
   for (const u of demoUsers) {
     await prisma.user.upsert({ where: { id: u.id }, update: u, create: u });
@@ -163,7 +168,7 @@ async function main() {
   }
 
   console.log("Seed complete. Demo accounts (all use password Demo@1234):");
-  console.log("  customer@giftapp.demo / store@giftapp.demo / admin@giftapp.demo");
+  console.log("  ananya.rao@giftly.app / priya.nair@giftly.app / admin@giftly.app");
 }
 
 main()

@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Gift, LayoutDashboard, Package, ClipboardList, Store as StoreIcon } from "lucide-react";
+import { Gift, LayoutDashboard, Package, ClipboardList, Store as StoreIcon, TrendingDown } from "lucide-react";
 
 const NAV = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: ClipboardList },
   { href: "/admin/stores", label: "Stores", icon: StoreIcon },
   { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/returns", label: "Returns & analytics", icon: TrendingDown },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

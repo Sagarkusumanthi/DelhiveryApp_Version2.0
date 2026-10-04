@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Gift, LayoutDashboard, Package, ClipboardList, Store } from "lucide-react";
+import { Gift, LayoutDashboard, Package, ClipboardList, Store, BarChart3 } from "lucide-react";
 
 const NAV = [
   { href: "/store/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/store/products", label: "Products", icon: Package },
   { href: "/store/orders", label: "Orders", icon: ClipboardList },
+  { href: "/store/reports", label: "Reports", icon: BarChart3 },
   { href: "/store/profile", label: "Store profile", icon: Store },
 ];
 

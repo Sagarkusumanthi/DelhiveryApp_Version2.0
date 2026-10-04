@@ -1,14 +1,7 @@
 "use client";
+import { STATUS_LABELS } from "@/lib/demo";
 
 const SEQUENCE = ["ORDER_PLACED", "STORE_ACCEPTED", "PREPARING_GIFT", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "DELIVERED"];
-const LABELS: Record<string, string> = {
-  ORDER_PLACED: "Order Placed",
-  STORE_ACCEPTED: "Store Accepted",
-  PREPARING_GIFT: "Preparing Gift",
-  READY_FOR_PICKUP: "Ready for Pickup",
-  OUT_FOR_DELIVERY: "Out for Delivery",
-  DELIVERED: "Delivered",
-};
 
 export function OrderTimeline({ status }: { status: string }) {
   if (status === "REJECTED") {
@@ -33,7 +26,7 @@ export function OrderTimeline({ status }: { status: string }) {
                 <span className={`h-6 w-0.5 ${state === "upcoming" ? "bg-border" : "bg-rose"}`} />
               )}
             </div>
-            <p className={`pb-5 text-sm ${state === "upcoming" ? "text-muted" : "font-semibold text-ink"}`}>{LABELS[s]}</p>
+            <p className={`pb-5 text-sm ${state === "upcoming" ? "text-muted" : "font-semibold text-ink"}`}>{STATUS_LABELS[s]}</p>
           </div>
         );
       })}

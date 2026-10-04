@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { formatINR } from "@/lib/utils";
+import { STATUS_LABELS } from "@/lib/demo";
 
 interface Stats { storeCount: number; productCount: number; orderCount: number; revenue: number; byStatus: Record<string, number> }
 
@@ -34,7 +35,7 @@ export default function AdminDashboardPage() {
         <p className="mb-2 text-sm font-semibold text-ink">Orders by status</p>
         {Object.entries(stats.byStatus).map(([status, count]) => (
           <div key={status} className="flex justify-between border-b border-border py-1 text-sm last:border-0">
-            <span className="text-muted">{status.replaceAll("_", " ")}</span>
+            <span className="text-muted">{STATUS_LABELS[status] ?? status}</span>
             <span className="font-semibold">{count}</span>
           </div>
         ))}

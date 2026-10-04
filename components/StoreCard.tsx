@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { demoRating, demoDelivery } from "@/lib/demo";
 
 export function StoreCard({ store }: { store: { id: string; name: string; category: string; icon: string; open: boolean } }) {
   return (
@@ -13,10 +14,17 @@ export function StoreCard({ store }: { store: { id: string; name: string; catego
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-ink">{store.name}</p>
         <p className="text-xs text-muted">{store.category}</p>
+        <p className="flex items-center gap-1 text-[10px] text-muted">
+          ⭐ {demoRating(store.id).toFixed(1)} · 🕐 {demoDelivery(store.id)}
+        </p>
       </div>
-      {!store.open && (
-        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Closed</span>
-      )}
+      <span
+        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+          store.open ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"
+        }`}
+      >
+        {store.open ? "Open" : "Closed"}
+      </span>
     </Link>
   );
 }

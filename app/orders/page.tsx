@@ -4,16 +4,12 @@ import Link from "next/link";
 import { CustomerHeader } from "@/components/CustomerHeader";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
 import { formatINR } from "@/lib/utils";
+import { STATUS_LABELS as STATUS_LABEL } from "@/lib/demo";
 
 interface Order {
   id: string; code: string; status: string; total: number; recipientName: string; createdAt: string;
   items: { product: { name: string; icon: string } }[];
 }
-
-const STATUS_LABEL: Record<string, string> = {
-  ORDER_PLACED: "Order Placed", STORE_ACCEPTED: "Store Accepted", PREPARING_GIFT: "Preparing Gift",
-  READY_FOR_PICKUP: "Ready for Pickup", OUT_FOR_DELIVERY: "Out for Delivery", DELIVERED: "Delivered", REJECTED: "Rejected",
-};
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);

@@ -33,6 +33,57 @@ export async function adminUpdateStore(storeId: string, input: Partial<{ open: b
   });
 }
 
+export async function adminReturnsAnalytics() {
+  const db = getDb();
+  const orders = await db.order.findMany({
+    include: { items: { include: { product: { include: { store: true } } } } },
+  });
+  const stores = await db.store.findMany();
+
+  type OrderRow = { status: string; rejectionReason: string | null; createdAt: Date; items: { product: { store: { id: string } } }[] };
+  type StoreRow = { id: string; name: string };
+  type StoreStat = { name: string; pct: number; count: number; orderCount: number };
+
+  const rejected = (orders as OrderRow[]).filter((o) => o.status === "REJECTED");
+  const total = orders.length || 1;
+  const returnRate = Number(((rejected.length / total) * 100).toFixed(1));
+
+  const reasonCounts: Record<string, number> = {};
+  for (const o of rejected) {
+    const reason = (o.rejectionReason || "Unspecified").trim();
+    reasonCounts[reason] = (reasonCounts[reason] ?? 0) + 1;
+  }
+  const topReasons = Object.entries(reasonCounts)
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const byStore: StoreStat[] = (stores as StoreRow[]).map((s) => {
+    const storeOrders = (orders as OrderRow[]).filter((o) => o.items[0]?.product?.store?.id === s.id);
+    const storeRejected = storeOrders.filter((o) => o.status === "REJECTED");
+    return {
+      name: s.name,
+      pct: storeOrders.length ? (storeRejected.length / storeOrders.length) * 100 : 0,
+      count: storeRejected.length,
+      orderCount: storeOrders.length,
+    };
+  });
+  const rejectionsByStore = [...byStore].sort((a, b) => b.pct - a.pct).slice(0, 6);
+  const worstStore = byStore.reduce((a, b) => (b.pct > a.pct ? b : a), { pct: -1, name: "", count: 0, orderCount: 0 } as StoreStat);
+  const busiestStore = byStore.reduce((a, b) => (b.orderCount > a.orderCount ? b : a), { orderCount: -1, name: "", pct: 0, count: 0 } as StoreStat);
+
+  // Daily rejection counts for the last 7 days (for a simple sparkline).
+  const days: { label: string; count: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const count = rejected.filter((o) => o.createdAt.toISOString().slice(0, 10) === key).length;
+    days.push({ label: key, count });
+  }
+
+  return { returnRate, rejectedCount: rejected.length, trend: days, topReasons, rejectionsByStore, worstStore, busiestStore };
+}
+
 export async function adminDashboardStats() {
   const db = getDb();
   const [storeCount, productCount, orderCount, orders] = await Promise.all([
