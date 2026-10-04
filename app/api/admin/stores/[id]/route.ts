@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminUpdateStore } from "@/lib/services/admin";
+import { adminUpdateStore, adminGetStoreDetail } from "@/lib/services/admin";
 import { requireRole } from "@/lib/session";
 import { z } from "zod";
 import { handleApiError, ValidationError } from "@/lib/api-errors";
 
 const schema = z.object({ open: z.boolean() });
+
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    await requireRole("ADMIN");
+    return NextResponse.json(await adminGetStoreDetail(params.id));
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {

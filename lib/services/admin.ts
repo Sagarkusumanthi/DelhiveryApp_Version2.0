@@ -84,6 +84,40 @@ export async function adminReturnsAnalytics() {
   return { returnRate, rejectedCount: rejected.length, trend: days, topReasons, rejectionsByStore, worstStore, busiestStore };
 }
 
+const ACTIVE_STATUSES = ["ORDER_PLACED", "STORE_ACCEPTED", "PREPARING_GIFT", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY"];
+
+export async function adminGetStoreDetail(storeId: string) {
+  const db = getDb();
+  const store = await db.store.findUnique({ where: { id: storeId }, include: { city: true } });
+  if (!store) throw new NotFoundError("Store not found.");
+  const productCount = await db.product.count({ where: { storeId } });
+  const orders: { status: string; total: number; createdAt: Date }[] = await db.order.findMany({
+    where: { items: { some: { product: { storeId } } } },
+    select: { status: true, total: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+  const active = orders.filter((o) => ACTIVE_STATUSES.includes(o.status)).length;
+  const completed = orders.filter((o) => o.status === "DELIVERED").length;
+  const rejected = orders.filter((o) => o.status === "REJECTED").length;
+  const returnPct = orders.length ? Number(((rejected / orders.length) * 100).toFixed(1)) : 0;
+  const revenue = orders.filter((o) => o.status === "DELIVERED").reduce((s, o) => s + o.total, 0);
+  return { store, productCount, active, completed, returnPct, revenue, totalOrders: orders.length };
+}
+
+export async function adminGetProductDetail(productId: string) {
+  const db = getDb();
+  const product = await db.product.findUnique({ where: { id: productId }, include: { store: true } });
+  if (!product) throw new NotFoundError("Product not found.");
+  const ordersWithProduct: { status: string; items: { qty: number }[] }[] = await db.order.findMany({
+    where: { items: { some: { productId } } },
+    include: { items: { where: { productId } } },
+  });
+  const delivered = ordersWithProduct.filter((o) => o.status === "DELIVERED");
+  const unitsSold = delivered.reduce((sum: number, o) => sum + o.items.reduce((s: number, it) => s + it.qty, 0), 0);
+  const revenue = delivered.reduce((sum: number, o) => sum + o.items.reduce((s: number, it) => s + it.qty * product.price, 0), 0);
+  return { product, timesOrdered: ordersWithProduct.length, unitsSold, revenue };
+}
+
 export async function adminDashboardStats() {
   const db = getDb();
   const [storeCount, productCount, orderCount, orders] = await Promise.all([

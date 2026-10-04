@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminUpdateProduct } from "@/lib/services/admin";
+import { adminUpdateProduct, adminGetProductDetail } from "@/lib/services/admin";
 import { requireRole } from "@/lib/session";
 import { productFormSchema } from "@/lib/validation";
 import { handleApiError, ValidationError } from "@/lib/api-errors";
+
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    await requireRole("ADMIN");
+    return NextResponse.json(await adminGetProductDetail(params.id));
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {

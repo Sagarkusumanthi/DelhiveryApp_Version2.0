@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
-import { STATUS_LABELS } from "@/lib/demo";
+import { StatusBadge } from "@/components/StatusBadge";
 
 interface Order {
   id: string; code: string; status: string; total: number; recipientName: string;
@@ -70,7 +70,7 @@ export default function StoreOrdersPage() {
           <div key={o.id} className="rounded-2xl border border-border bg-white p-4">
             <div className="flex items-center justify-between">
               <Link href={`/store/orders/${o.id}`} className="text-sm font-semibold text-ink">{o.code}</Link>
-              <span className="rounded-full bg-blush px-2.5 py-1 text-[11px] font-semibold text-ink">{STATUS_LABELS[o.status] ?? o.status}</span>
+              <StatusBadge status={o.status} />
             </div>
             <p className="mt-1 text-sm text-muted">{o.items.map((i) => `${i.product.name} ×${i.qty}`).join(", ")}</p>
             <p className="text-sm text-muted">For {o.recipientName} · {formatINR(o.total)}</p>

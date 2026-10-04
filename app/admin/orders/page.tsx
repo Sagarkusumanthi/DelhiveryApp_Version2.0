@@ -5,6 +5,7 @@ import { Select } from "@/components/ui/select";
 import { formatINR } from "@/lib/utils";
 import { ORDER_STATUS_VALUES } from "@/lib/constants";
 import { STATUS_LABELS } from "@/lib/demo";
+import { StatusBadge } from "@/components/StatusBadge";
 
 interface Order { id: string; code: string; status: string; total: number; recipientName: string }
 
@@ -43,7 +44,7 @@ export default function AdminOrdersPage() {
           <div key={o.id} className="rounded-2xl border border-border bg-white p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-ink">{o.code}</p>
-              <span className="rounded-full bg-blush px-2.5 py-1 text-[11px] font-semibold text-ink">{STATUS_LABELS[o.status] ?? o.status}</span>
+              <StatusBadge status={o.status} />
             </div>
             <p className="text-sm text-muted">For {o.recipientName} · {formatINR(o.total)}</p>
             {overrideFor === o.id ? (

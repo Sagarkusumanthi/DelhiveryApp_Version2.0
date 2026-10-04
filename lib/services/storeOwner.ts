@@ -9,7 +9,7 @@ export async function getMyStoreId(userId: string): Promise<string | null> {
 }
 
 export async function getMyStore(storeId: string) {
-  const store = await getDb().store.findUnique({ where: { id: storeId }, include: { products: true } });
+  const store = await getDb().store.findUnique({ where: { id: storeId }, include: { products: true, city: true } });
   if (!store) throw new NotFoundError("Store not found.");
   return store;
 }
