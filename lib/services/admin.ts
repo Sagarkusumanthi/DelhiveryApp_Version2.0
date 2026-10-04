@@ -2,9 +2,6 @@ import "server-only";
 import { getDb } from "@/lib/db";
 import { NotFoundError } from "@/lib/api-errors";
 
-// Unlike storeOwner.updateMyProduct, these admin variants don't check which
-// store owns the product/order — the /api/admin/** routes are already
-// gated to the ADMIN role by middleware.
 export async function adminUpdateProduct(productId: string, input: Partial<{
   name: string; description: string; price: number; featured: boolean; isAvailable: boolean;
 }>) {
@@ -17,8 +14,9 @@ export async function adminUpdateProduct(productId: string, input: Partial<{
       ...(input.name ? { name: input.name } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.price !== undefined ? { price: input.price } : {}),
-      ...(input.featured !== undefined ? { featured: input.featured } : {}),
+      ...(input.featured !== undefined ? { isFeatured: input.featured } : {}),
       ...(input.isAvailable !== undefined ? { isAvailable: input.isAvailable } : {}),
+      updatedAt: new Date(),
     },
   });
 }
@@ -29,7 +27,7 @@ export async function adminUpdateStore(storeId: string, input: Partial<{ open: b
   if (!store) throw new NotFoundError("Store not found.");
   return db.store.update({
     where: { id: storeId },
-    data: { ...(input.open !== undefined ? { open: input.open } : {}) },
+    data: { ...(input.open !== undefined ? { isOpen: input.open } : {}), updatedAt: new Date() },
   });
 }
 
@@ -40,47 +38,30 @@ export async function adminReturnsAnalytics() {
   });
   const stores = await db.store.findMany();
 
-  type OrderRow = { status: string; rejectionReason: string | null; createdAt: Date; items: { product: { store: { id: string } } }[] };
-  type StoreRow = { id: string; name: string };
-  type StoreStat = { name: string; pct: number; count: number; orderCount: number };
-
-  const rejected = (orders as OrderRow[]).filter((o) => o.status === "REJECTED");
+  const rejected = orders.filter((o) => o.status === "REJECTED");
   const total = orders.length || 1;
   const returnRate = Number(((rejected.length / total) * 100).toFixed(1));
-
   const reasonCounts: Record<string, number> = {};
   for (const o of rejected) {
     const reason = (o.rejectionReason || "Unspecified").trim();
     reasonCounts[reason] = (reasonCounts[reason] ?? 0) + 1;
   }
-  const topReasons = Object.entries(reasonCounts)
-    .map(([reason, count]) => ({ reason, count }))
-    .sort((a, b) => b.count - a.count);
-
-  const byStore: StoreStat[] = (stores as StoreRow[]).map((s) => {
-    const storeOrders = (orders as OrderRow[]).filter((o) => o.items[0]?.product?.store?.id === s.id);
+  const topReasons = Object.entries(reasonCounts).map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count);
+  const byStore = stores.map((s) => {
+    const storeOrders = orders.filter((o) => o.items.some((i) => i.product.storeId === s.id));
     const storeRejected = storeOrders.filter((o) => o.status === "REJECTED");
-    return {
-      name: s.name,
-      pct: storeOrders.length ? (storeRejected.length / storeOrders.length) * 100 : 0,
-      count: storeRejected.length,
-      orderCount: storeOrders.length,
-    };
+    return { name: s.name, pct: storeOrders.length ? (storeRejected.length / storeOrders.length) * 100 : 0, count: storeRejected.length, orderCount: storeOrders.length };
   });
   const rejectionsByStore = [...byStore].sort((a, b) => b.pct - a.pct).slice(0, 6);
-  const worstStore = byStore.reduce((a, b) => (b.pct > a.pct ? b : a), { pct: -1, name: "", count: 0, orderCount: 0 } as StoreStat);
-  const busiestStore = byStore.reduce((a, b) => (b.orderCount > a.orderCount ? b : a), { orderCount: -1, name: "", pct: 0, count: 0 } as StoreStat);
-
-  // Daily rejection counts for the last 7 days (for a simple sparkline).
+  const worstStore = byStore.reduce((a, b) => (b.pct > a.pct ? b : a), { pct: -1, name: "", count: 0, orderCount: 0 });
+  const busiestStore = byStore.reduce((a, b) => (b.orderCount > a.orderCount ? b : a), { orderCount: -1, name: "", pct: 0, count: 0 });
   const days: { label: string; count: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0, 10);
-    const count = rejected.filter((o) => o.createdAt.toISOString().slice(0, 10) === key).length;
-    days.push({ label: key, count });
+    days.push({ label: key, count: rejected.filter((o) => o.placedAt.toISOString().slice(0, 10) === key).length });
   }
-
   return { returnRate, rejectedCount: rejected.length, trend: days, topReasons, rejectionsByStore, worstStore, busiestStore };
 }
 
@@ -88,34 +69,28 @@ const ACTIVE_STATUSES = ["ORDER_PLACED", "STORE_ACCEPTED", "PREPARING_GIFT", "RE
 
 export async function adminGetStoreDetail(storeId: string) {
   const db = getDb();
-  const store = await db.store.findUnique({ where: { id: storeId }, include: { city: true } });
+  const store = await db.store.findUnique({ where: { id: storeId }, include: { city: true, Category: true, User: true } });
   if (!store) throw new NotFoundError("Store not found.");
   const productCount = await db.product.count({ where: { storeId } });
-  const orders: { status: string; total: number; createdAt: Date }[] = await db.order.findMany({
-    where: { items: { some: { product: { storeId } } } },
-    select: { status: true, total: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const orders = await db.order.findMany({ where: { storeId }, select: { status: true, total: true, placedAt: true }, orderBy: { placedAt: "desc" } });
   const active = orders.filter((o) => ACTIVE_STATUSES.includes(o.status)).length;
   const completed = orders.filter((o) => o.status === "DELIVERED").length;
   const rejected = orders.filter((o) => o.status === "REJECTED").length;
   const returnPct = orders.length ? Number(((rejected / orders.length) * 100).toFixed(1)) : 0;
-  const revenue = orders.filter((o) => o.status === "DELIVERED").reduce((s, o) => s + o.total, 0);
-  return { store, productCount, active, completed, returnPct, revenue, totalOrders: orders.length };
+  const revenue = orders.filter((o) => o.status === "DELIVERED").reduce((s, o) => s + Number(o.total), 0);
+  const mappedStore = { ...store, category: store.Category.name, icon: store.Category.icon, open: store.isOpen, owner: store.User.name };
+  return { store: mappedStore, productCount, active, completed, returnPct, revenue, totalOrders: orders.length };
 }
 
 export async function adminGetProductDetail(productId: string) {
   const db = getDb();
   const product = await db.product.findUnique({ where: { id: productId }, include: { store: true } });
   if (!product) throw new NotFoundError("Product not found.");
-  const ordersWithProduct: { status: string; items: { qty: number }[] }[] = await db.order.findMany({
-    where: { items: { some: { productId } } },
-    include: { items: { where: { productId } } },
-  });
+  const ordersWithProduct = await db.order.findMany({ where: { items: { some: { productId } } }, include: { items: { where: { productId } } } });
   const delivered = ordersWithProduct.filter((o) => o.status === "DELIVERED");
-  const unitsSold = delivered.reduce((sum: number, o) => sum + o.items.reduce((s: number, it) => s + it.qty, 0), 0);
-  const revenue = delivered.reduce((sum: number, o) => sum + o.items.reduce((s: number, it) => s + it.qty * product.price, 0), 0);
-  return { product, timesOrdered: ordersWithProduct.length, unitsSold, revenue };
+  const unitsSold = delivered.reduce((sum, o) => sum + o.items.reduce((s, it) => s + it.quantity, 0), 0);
+  const revenue = delivered.reduce((sum, o) => sum + o.items.reduce((s, it) => s + it.quantity * Number(it.unitPrice), 0), 0);
+  return { product: { ...product, price: Number(product.price), icon: product.imageUrl, featured: product.isFeatured }, timesOrdered: ordersWithProduct.length, unitsSold, revenue };
 }
 
 export async function adminDashboardStats() {
@@ -124,13 +99,13 @@ export async function adminDashboardStats() {
     db.store.count(),
     db.product.count(),
     db.order.count(),
-    db.order.findMany({ select: { status: true, total: true, createdAt: true } }),
+    db.order.findMany({ select: { status: true, total: true, placedAt: true } }),
   ]);
   const byStatus: Record<string, number> = {};
   let revenue = 0;
   for (const o of orders) {
     byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
-    if (o.status === "DELIVERED") revenue += o.total;
+    if (o.status === "DELIVERED") revenue += Number(o.total);
   }
   return { storeCount, productCount, orderCount, revenue, byStatus };
 }
