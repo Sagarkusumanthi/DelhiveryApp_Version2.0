@@ -3,11 +3,9 @@
 // passwords), reminders and a group gift. Run with: npm run db:seed
 
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../lib/password";
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 const CITIES = [
   { id: "hyd", name: "Hyderabad" },
