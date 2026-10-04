@@ -8,8 +8,8 @@ export async function login(identifier: string, password: string) {
     where: { OR: [{ email: { equals: identifier, mode: "insensitive" } }, { phone: identifier }] },
   });
   if (!user) throw new UnauthorizedError("Incorrect email/phone or password.");
-  const valid = await verifyPassword(password, user.password);
+  const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) throw new UnauthorizedError("Incorrect email/phone or password.");
-  const { password: _pw, ...safeUser } = user;
+  const { passwordHash: _pw, ...safeUser } = user;
   return safeUser;
 }
