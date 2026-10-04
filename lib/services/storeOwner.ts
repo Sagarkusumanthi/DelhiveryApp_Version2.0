@@ -4,12 +4,12 @@ import { NotFoundError } from "@/lib/api-errors";
 import { ForbiddenError } from "@/lib/session";
 
 export async function getMyStoreId(userId: string): Promise<string | null> {
-  const me = await getDb().user.findUnique({ where: { id: userId } });
-  return me?.storeId ?? null;
+  const me = await getDb().user.findUnique({ where: { id: userId }, include: { Store: true } });
+  return me?.Store[0]?.id ?? null;
 }
 
 export async function getMyStore(storeId: string) {
-  const store = await getDb().store.findUnique({ where: { id: storeId }, include: { products: true, city: true } });
+  const store = await getDb().store.findUnique({ where: { id: storeId }, include: { products: true, city: true, Category: true, User: true } });
   if (!store) throw new NotFoundError("Store not found.");
   return store;
 }
@@ -25,13 +25,12 @@ export async function updateStoreProfile(storeId: string, input: Partial<{
       ...(input.address !== undefined ? { address: input.address } : {}),
       ...(input.openTime ? { openTime: input.openTime } : {}),
       ...(input.closeTime ? { closeTime: input.closeTime } : {}),
-      ...(input.open !== undefined ? { open: input.open } : {}),
+      ...(input.open !== undefined ? { isOpen: input.open } : {}),
+      updatedAt: new Date(),
     },
   });
 }
 
-// storeId is the acting store owner's own store — verified by the caller so
-// one store owner can't edit another store's products via a guessed id.
 export async function updateMyProduct(storeId: string, productId: string, input: Partial<{
   name: string; description: string; price: number; featured: boolean; isAvailable: boolean;
 }>) {
@@ -39,56 +38,44 @@ export async function updateMyProduct(storeId: string, productId: string, input:
   const product = await db.product.findUnique({ where: { id: productId } });
   if (!product) throw new NotFoundError("Product not found.");
   if (product.storeId !== storeId) throw new ForbiddenError("This product belongs to a different store.");
-
   return db.product.update({
     where: { id: productId },
     data: {
       ...(input.name ? { name: input.name } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.price !== undefined ? { price: input.price } : {}),
-      ...(input.featured !== undefined ? { featured: input.featured } : {}),
+      ...(input.featured !== undefined ? { isFeatured: input.featured } : {}),
       ...(input.isAvailable !== undefined ? { isAvailable: input.isAvailable } : {}),
+      updatedAt: new Date(),
     },
   });
 }
 
 export async function getStoreReports(storeId: string) {
   const db = getDb();
-  const orders: { status: string; total: number; createdAt: Date }[] = await db.order.findMany({
-    where: { items: { some: { product: { storeId } } } },
-    select: { status: true, total: true, createdAt: true },
-  });
+  const orders = await db.order.findMany({ where: { storeId }, select: { status: true, total: true, placedAt: true } });
   const delivered = orders.filter((o) => o.status === "DELIVERED");
-  const totalSales = delivered.reduce((s, o) => s + o.total, 0);
+  const totalSales = delivered.reduce((s, o) => s + Number(o.total), 0);
   const avgOrderValue = delivered.length ? Math.round(totalSales / delivered.length) : 0;
 
-  function dailyBuckets(rows: { createdAt: Date }[]) {
+  function dailyBuckets(rows: { placedAt: Date }[]) {
     const days: { label: string; count: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const count = rows.filter((o) => o.createdAt.toISOString().slice(0, 10) === key).length;
-      days.push({ label: key, count });
+      days.push({ label: key, count: rows.filter((o) => o.placedAt.toISOString().slice(0, 10) === key).length });
     }
     return days;
   }
 
   const byStatus: Record<string, number> = {};
   for (const o of orders) byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
-
-  return {
-    totalSales,
-    deliveredCount: delivered.length,
-    avgOrderValue,
-    salesTrend: dailyBuckets(delivered),
-    ordersTrend: dailyBuckets(orders),
-    byStatus,
-  };
+  return { totalSales, deliveredCount: delivered.length, avgOrderValue, salesTrend: dailyBuckets(delivered), ordersTrend: dailyBuckets(orders), byStatus };
 }
 
 export async function setAllProductsAvailability(storeId: string, isAvailable: boolean) {
   const db = getDb();
-  await db.product.updateMany({ where: { storeId }, data: { isAvailable } });
+  await db.product.updateMany({ where: { storeId }, data: { isAvailable, updatedAt: new Date() } });
   return db.product.findMany({ where: { storeId } });
 }
