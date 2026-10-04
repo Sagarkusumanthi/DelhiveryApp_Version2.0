@@ -17,13 +17,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireRole("CUSTOMER");
+    const session = await requireRole("CUSTOMER");
     const body = await req.json();
     const parsed = groupGiftSchema.safeParse(body);
     if (!parsed.success) {
       throw new ValidationError("Please check the highlighted fields.", parsed.error.flatten().fieldErrors as any);
     }
-    const groupGift = await createGroupGift(parsed.data);
+    const groupGift = await createGroupGift(session.userId, parsed.data);
     return NextResponse.json({ groupGift }, { status: 201 });
   } catch (err) {
     return handleApiError(err);
