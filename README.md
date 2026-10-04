@@ -153,3 +153,5 @@ do on your behalf.
   captured correctly at order time, but product price displays elsewhere
   show the *current* price. Low-risk for a demo, worth revisiting if
   product prices will actually change over time.
+
+<!-- CI dependency maintenance enabled. -->
