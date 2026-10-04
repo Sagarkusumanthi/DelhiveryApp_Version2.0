@@ -8,10 +8,26 @@ export async function getMyStoreId(userId: string): Promise<string | null> {
   return me?.Store[0]?.id ?? null;
 }
 
+function mapStore(store: any) {
+  return {
+    ...store,
+    category: store.Category?.name ?? store.categoryId,
+    icon: store.Category?.icon ?? "🎁",
+    open: store.isOpen,
+    owner: store.User?.name ?? store.ownerUserId,
+    products: store.products?.map((p: any) => ({
+      ...p,
+      price: Number(p.price),
+      icon: p.imageUrl,
+      featured: p.isFeatured,
+    })),
+  };
+}
+
 export async function getMyStore(storeId: string) {
   const store = await getDb().store.findUnique({ where: { id: storeId }, include: { products: true, city: true, Category: true, User: true } });
   if (!store) throw new NotFoundError("Store not found.");
-  return store;
+  return mapStore(store);
 }
 
 export async function updateStoreProfile(storeId: string, input: Partial<{
