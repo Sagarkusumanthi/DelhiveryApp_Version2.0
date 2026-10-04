@@ -1,3 +1,7 @@
+This repo is created for claude development (Claude HP laptop)
+
+
+
 # Giftly
 
 A gift-delivery marketplace app: customers order gifts from local stores,
