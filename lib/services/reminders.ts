@@ -1,8 +1,14 @@
 import "server-only";
 import { getDb } from "@/lib/db";
 
+function normalizeOccasion(value: string): "BIRTHDAY" | "ANNIVERSARY" | "WEDDING" | "FESTIVAL" | "OTHER" {
+  const v = value.trim().toUpperCase();
+  if (v === "BIRTHDAY" || v === "ANNIVERSARY" || v === "WEDDING" || v === "FESTIVAL") return v;
+  return "OTHER";
+}
+
 export async function listReminders(userId: string) {
-  return getDb().reminder.findMany({ where: { userId }, orderBy: { date: "asc" } });
+  return getDb().reminder.findMany({ where: { customerId: userId }, orderBy: { date: "asc" } });
 }
 
 export async function createReminder(userId: string, input: {
@@ -11,15 +17,16 @@ export async function createReminder(userId: string, input: {
 }) {
   return getDb().reminder.create({
     data: {
-      userId,
+      customerId: userId,
       occasionName: input.occasionName,
       recipientName: input.recipientName,
-      occasionType: input.occasionType,
+      occasionType: normalizeOccasion(input.occasionType),
       date: new Date(input.date),
       repeatYearly: !!input.repeatYearly,
       remindMe: input.remindMe,
       giftCategory: input.giftCategory,
       note: input.note,
+      updatedAt: new Date(),
     },
   });
 }
@@ -33,13 +40,14 @@ export async function updateReminder(id: string, input: Partial<{
     data: {
       ...(input.occasionName ? { occasionName: input.occasionName } : {}),
       ...(input.recipientName ? { recipientName: input.recipientName } : {}),
-      ...(input.occasionType ? { occasionType: input.occasionType } : {}),
+      ...(input.occasionType ? { occasionType: normalizeOccasion(input.occasionType) } : {}),
       ...(input.date ? { date: new Date(input.date) } : {}),
       ...(input.repeatYearly !== undefined ? { repeatYearly: input.repeatYearly } : {}),
       ...(input.remindMe ? { remindMe: input.remindMe } : {}),
       ...(input.giftCategory !== undefined ? { giftCategory: input.giftCategory } : {}),
       ...(input.note !== undefined ? { note: input.note } : {}),
       ...(input.giftPlanned !== undefined ? { giftPlanned: input.giftPlanned } : {}),
+      updatedAt: new Date(),
     },
   });
 }
