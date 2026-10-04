@@ -1,11 +1,5 @@
-// Giftly — Postgres schema (Prisma, driver-adapter client)
-// Models cities, categories, stores, products, users, orders (with items +
-// status history), reminders, and group gifts.
-
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["queryCompiler", "driverAdapters"]
-  engineType      = "client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -172,7 +166,7 @@ model Reminder {
 }
 
 model GroupGift {
-  id             String                 @id @default(cuid())
+  id             String                 @id
   title          String
   occasionType   String
   recipientName  String
